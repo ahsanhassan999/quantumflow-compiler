@@ -1,0 +1,5 @@
+int a := 5;
+# '@' and '$' are illegal characters in QuantumFlow
+int b := 10 @ 20;
+pulse flag := $true;
+

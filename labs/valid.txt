@@ -1,0 +1,21 @@
+int a := 5;
+int b := 10;
+int sum;
+pulse big := false;
+wave msg := "done";
+
+sum := a .+. b .*. 2;
+
+when (sum >>> 20) {
+    big := true;
+} otherwise {
+    big := false;
+}
+
+cycle (a <<< b) {
+    a := a .+. 1;
+}
+
+show(sum);
+show(msg);
+

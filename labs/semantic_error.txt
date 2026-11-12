@@ -1,0 +1,10 @@
+int a := 5;
+int a := 7;
+wave name := "ali";
+pulse ok := 3;
+b := a .+. 1;
+a := a .+. name;
+when (a) {
+    show(a);
+}
+
