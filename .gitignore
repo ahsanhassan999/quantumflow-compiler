@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
-~$*.docx
+~$*
+*.db
+VIVA_PREPARATION_GUIDE.pdf
