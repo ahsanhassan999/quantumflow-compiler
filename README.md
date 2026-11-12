@@ -93,33 +93,6 @@ The web application allows the user or instructor to write or select QuantumFlow
    http://127.0.0.1:5000
    ```
 
----
-
-## 📁 Command-Line Lab Suite (`labs/` Folder)
-
-All 4 manual lab assignments are located in the `labs/` directory:
-
-```bash
-cd labs
-
-# Lab 1: Lexical Analysis
-python lab1_lexer.py valid.txt
-python lab1_lexer.py lexical_error.txt
-
-# Lab 2: Syntax Analysis (Parser)
-python lab2_parser.py valid.txt
-python lab2_parser.py syntax_error.txt
-
-# Lab 3: Semantic Analysis
-python lab3_semantic.py valid.txt
-python lab3_semantic.py semantic_error.txt
-
-# Lab 4: Intermediate Code Generation
-python lab4_icg.py valid.txt
-```
-
----
-
 ## 🌐 Live Cloud Deployment
 
 The application is deployed and accessible 24/7 at:  
