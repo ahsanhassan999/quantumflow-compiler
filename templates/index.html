@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantumFlow Compiler | CC Project</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        vscode: {
+                            bg: '#1e1e1e',
+                            sidebar: '#252526',
+                            header: '#323233',
+                            border: '#3c3c3c',
+                            tab: '#2d2d2d',
+                            tabActive: '#1e1e1e',
+                            text: '#cccccc'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CodeMirror 5 Core & Themes (VS Code Dark / Light) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/default.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.2s ease, color 0.2s ease; }
+        .font-code { font-family: 'Fira Code', monospace; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; }
+        
+        /* CodeMirror sizing */
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Fira Code', monospace;
+            font-size: 13.5px;
+            border-radius: 0.5rem;
+            line-height: 1.6;
+        }
+
+        /* VS Code / Antigravity Dark Mode styling for CodeMirror */
+        .dark .CodeMirror {
+            background: #18181b !important;
+            color: #d4d4d4 !important;
+        }
+        .dark .CodeMirror-gutters {
+            background: #18181b !important;
+            border-right: 1px solid #27272a !important;
+        }
+        .dark .CodeMirror-linenumber {
+            color: #71717a !important;
+        }
+        .dark .CodeMirror-activeline-background {
+            background: rgba(39, 39, 42, 0.6) !important;
+        }
+
+        /* VS Code Light Mode styling for CodeMirror */
+        html:not(.dark) .CodeMirror {
+            background: #ffffff !important;
+            color: #1e293b !important;
+            border: 1px solid #e2e8f0;
+        }
+        html:not(.dark) .CodeMirror-gutters {
+            background: #f8fafc !important;
+            border-right: 1px solid #e2e8f0 !important;
+        }
+        html:not(.dark) .CodeMirror-linenumber {
+            color: #94a3b8 !important;
+        }
+        html:not(.dark) .CodeMirror-activeline-background {
+            background: #f1f5f9 !important;
+        }
+
+        /* Auto-completion popup styling */
+        .CodeMirror-hints {
+            font-family: 'Fira Code', monospace;
+            font-size: 12.5px;
+            padding: 4px;
+            border-radius: 0.5rem;
+            z-index: 1000 !important;
+        }
+        .dark .CodeMirror-hints {
+            background: #18181b !important;
+            border: 1px solid #3f3f46 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+        }
+        html:not(.dark) .CodeMirror-hints {
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+        }
+        .dark .CodeMirror-hint {
+            color: #e4e4e7 !important;
+        }
+        html:not(.dark) .CodeMirror-hint {
+            color: #1e293b !important;
+        }
+        .CodeMirror-hint-active {
+            background: #0284c7 !important;
+            color: #ffffff !important;
+            border-radius: 0.375rem;
+        }
+        .hint-badge {
+            font-size: 10px;
+            float: right;
+            margin-left: 14px;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+        .dark .hint-badge {
+            background: #27272a;
+            color: #38bdf8;
+        }
+        html:not(.dark) .hint-badge {
+            background: #e0f2fe;
+            color: #0284c7;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-[#121214] text-slate-800 dark:text-zinc-200 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header (VS Code / Antigravity styled) -->
+    <header class="bg-white dark:bg-[#18181b] border-b border-slate-200 dark:border-zinc-800 px-6 py-3 flex flex-wrap justify-between items-center shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-lg text-white shadow-md shadow-cyan-500/20">
+                <i class="fa-solid fa-atom"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                    QuantumFlow <span class="text-[11px] bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-800 px-2 py-0.5 rounded-full font-semibold">Compiler Pipeline</span>
+                </h1>
+                <p class="text-xs text-slate-500 dark:text-zinc-400">Compiler Construction Project • Interactive 5 Stages Pipeline</p>
+            </div>
+        </div>
+
+        <!-- Controls: Theme Toggle, Modals, Run Button -->
+        <div class="flex items-center gap-2.5">
+            
+            <!-- VS Code / Antigravity Theme Switcher Button -->
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800/80 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-medium flex items-center gap-2 transition" title="Switch Theme (VS Code Dark / Light)">
+                <i id="themeIcon" class="fa-solid fa-moon text-blue-500"></i>
+                <span id="themeLabel">Dark Theme</span>
+            </button>
+
+            <!-- Group Details -->
+            <button onclick="toggleModal('groupModal')" class="bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 flex items-center gap-2 transition">
+                <i class="fa-solid fa-users text-cyan-600 dark:text-cyan-400"></i>
+                <span>Group Details</span>
+            </button>
+
+            <!-- Compile & Run Action Button -->
+            <button id="runBtn" onclick="runCompiler()" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow-md shadow-cyan-500/20 flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-play"></i>
+                <span>Compile & Run</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 max-w-[1900px] w-full mx-auto overflow-hidden">
+        
+        <!-- Left Panel: Source Code Editor (IDE-style) -->
+        <div class="lg:col-span-5 flex flex-col bg-white dark:bg-[#18181b] border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+            <!-- Editor Header & Sample Selector -->
+            <div class="bg-slate-100 dark:bg-zinc-900 px-4 py-2 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                    <i class="fa-solid fa-code text-cyan-600 dark:text-cyan-400"></i>
+                    <span>Source Code Editor</span>
+                </div>
+                <!-- Sample Programs Dropdown -->
+                <div class="flex items-center gap-2">
+                    <label for="sampleSelect" class="text-xs text-slate-500 dark:text-zinc-400 font-medium">Sample:</label>
+                    <select id="sampleSelect" onchange="loadSample()" class="bg-white dark:bg-zinc-800 text-xs text-slate-700 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700 rounded px-2.5 py-1 focus:ring-1 focus:ring-cyan-500 focus:outline-none">
+                        {% for key, val in samples.items() %}
+                        <option value="{{ key }}">{{ val.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- CodeMirror Editor Container -->
+            <div class="relative flex-1 p-2 bg-slate-50 dark:bg-[#18181b]">
+                <textarea id="codeInput"></textarea>
+            </div>
+
+            <!-- Editor Footer with Autocomplete Hint -->
+            <div class="bg-slate-100 dark:bg-zinc-900 px-4 py-2 text-xs border-t border-slate-200 dark:border-zinc-800 flex justify-between text-slate-500 dark:text-zinc-400 items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-regular fa-keyboard text-cyan-500"></i>
+                    <span>Press <kbd class="px-1.5 py-0.5 bg-slate-200 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded text-[10px] font-mono font-semibold text-cyan-700 dark:text-cyan-300">Ctrl + Space</kbd> for auto-completion</span>
+                </div>
+                <button onclick="clearEditor()" class="hover:text-red-500 transition flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i>Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Compiler Pipeline Stages (Tabs) -->
+        <div class="lg:col-span-7 flex flex-col bg-white dark:bg-[#18181b] border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+            
+            <!-- Stage Tabs (Now includes Grammar CFG / LFG tab directly beside Lexical, Syntax, Semantic) -->
+            <div class="bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 flex flex-wrap text-xs font-medium">
+                <button onclick="switchTab('grammarTab')" id="btn-grammarTab" class="tab-btn px-4 py-2.5 flex items-center gap-2 transition hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                    <i class="fa-solid fa-book-bookmark text-blue-500"></i>
+                    <span>Grammar (CFG)</span>
+                </button>
+                <button onclick="switchTab('lexicalTab')" id="btn-lexicalTab" class="tab-btn px-4 py-2.5 flex items-center gap-2 transition bg-blue-600 text-white font-semibold">
+                    <i class="fa-solid fa-list-ol"></i>
+                    <span>1. Lexical</span>
+                    <span id="tokenBadge" class="bg-blue-700 text-white text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+                </button>
+                <button onclick="switchTab('syntaxTab')" id="btn-syntaxTab" class="tab-btn px-4 py-2.5 flex items-center gap-2 transition hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span>2. Syntax (AST)</span>
+                </button>
+                <button onclick="switchTab('semanticTab')" id="btn-semanticTab" class="tab-btn px-4 py-2.5 flex items-center gap-2 transition hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                    <i class="fa-solid fa-table-cells"></i>
+                    <span>3. Semantic</span>
+                </button>
+                <button onclick="switchTab('icgTab')" id="btn-icgTab" class="tab-btn px-4 py-2.5 flex items-center gap-2 transition hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>4. ICG (3AC)</span>
+                </button>
+                <button onclick="switchTab('outputTab')" id="btn-outputTab" class="tab-btn px-4 py-2.5 flex items-center gap-2 transition hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>5. Execution</span>
+                </button>
+            </div>
+
+            <!-- Tab Content Area -->
+            <div class="flex-1 p-4 overflow-y-auto custom-scrollbar bg-slate-50/60 dark:bg-[#121214]/60 relative">
+                
+                <!-- Status Banner for Errors / Success -->
+                <div id="statusBanner" class="hidden mb-4 p-3 rounded-lg text-xs font-medium border flex items-center gap-3">
+                    <i id="statusIcon" class="text-base"></i>
+                    <span id="statusMessage"></span>
+                </div>
+
+                <!-- 0. Grammar (CFG / Language Formal Grammar) Tab -->
+                <div id="grammarTab" class="tab-content hidden space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400 flex items-center gap-2">
+                            <i class="fa-solid fa-book-bookmark text-blue-500"></i>
+                            <span>QuantumFlow Language Grammar Specification (CFG)</span>
+                        </h3>
+                        <span class="text-[11px] text-slate-500 dark:text-zinc-500">Reference for testing and validation</span>
+                    </div>
+
+                    <!-- Custom Vocabulary Overview -->
+                    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-3">
+                        <h4 class="text-xs font-bold uppercase text-slate-500 dark:text-zinc-400 mb-2">Custom Keywords & Operators Table</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-code">
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">module</span>
+                                <div class="text-[11px] text-slate-500">Function header</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">initiate ... end</span>
+                                <div class="text-[11px] text-slate-500">Block boundary</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">when / otherwise</span>
+                                <div class="text-[11px] text-slate-500">If / Else branch</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">cycle</span>
+                                <div class="text-[11px] text-slate-500">While iteration</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">yield / show</span>
+                                <div class="text-[11px] text-slate-500">Return / Print</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">:=</span>
+                                <div class="text-[11px] text-slate-500">Assignment</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">.+., .-.</span>
+                                <div class="text-[11px] text-slate-500">Add, Subtract</div>
+                            </div>
+                            <div class="p-2 rounded bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+                                <span class="text-cyan-600 dark:text-cyan-400 font-bold">==?, !=?, &gt;&gt;&gt;, &lt;&lt;&lt;</span>
+                                <div class="text-[11px] text-slate-500">Relational checks</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formal EBNF Grammar -->
+                    <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-3">
+                        <h4 class="text-xs font-bold uppercase text-slate-500 dark:text-zinc-400 mb-2">Formal Grammar (Context-Free Grammar / EBNF)</h4>
+                        <pre class="bg-slate-50 dark:bg-zinc-950 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 font-code text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed overflow-x-auto custom-scrollbar">
+Program        ::= ( Statement )*
+Statement      ::= ModuleDef | VarAssign | WhenStmt | CycleStmt | YieldStmt | ShowStmt
+ModuleDef      ::= "module" IDENTIFIER "(" [ ParamList ] ")" ":" Block
+ParamList      ::= IDENTIFIER ( "," IDENTIFIER )*
+Block          ::= "initiate" Statement* [ "end" ]
+VarAssign      ::= IDENTIFIER ":=" Expr
+WhenStmt       ::= "when" Expr Block [ "otherwise" Block ]
+CycleStmt      ::= "cycle" Expr Block
+YieldStmt      ::= "yield" Expr
+ShowStmt       ::= "show" "(" Expr ")"
+
+Expr           ::= LogicalOr
+LogicalOr      ::= LogicalAnd ( "|||" LogicalAnd )*
+LogicalAnd     ::= Relational ( "&&&" Relational )*
+Relational     ::= Additive [ ( "==?" | "!=?" | ">>>" | "<<<" ) Additive ]
+Additive       ::= Multiplicative ( ( ".+." | ".-." ) Multiplicative )*
+Multiplicative ::= Primary ( ( ".*." | "./." ) Primary )*
+Primary        ::= NUMBER | STRING | IDENTIFIER | "(" Expr ")"
+                        </pre>
+                    </div>
+                </div>
+
+                <!-- 1. Lexical Analysis Tab -->
+                <div id="lexicalTab" class="tab-content">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">Generated Tokens Stream</h3>
+                        <span class="text-[11px] text-slate-500 dark:text-zinc-500">Line, Column, Token Type & Lexeme</span>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 font-semibold uppercase text-[10px]">
+                                <tr>
+                                    <th class="py-2.5 px-3">#</th>
+                                    <th class="py-2.5 px-3">Line:Col</th>
+                                    <th class="py-2.5 px-3">Token Type</th>
+                                    <th class="py-2.5 px-3">Lexeme (Value)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tokenTableBody" class="divide-y divide-slate-200 dark:divide-zinc-800 font-code text-slate-700 dark:text-zinc-300">
+                                <tr>
+                                    <td colspan="4" class="py-8 text-center text-slate-400 dark:text-zinc-500 font-sans">
+                                        Click "Compile & Run" to perform lexical analysis.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. Syntax Analysis (AST) Tab -->
+                <div id="syntaxTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">Abstract Syntax Tree (AST) Hierarchy</h3>
+                        <span class="text-[11px] text-slate-500 dark:text-zinc-500">Recursive Descent Output</span>
+                    </div>
+                    <pre id="astOutput" class="bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 font-code text-xs text-emerald-600 dark:text-emerald-400 overflow-x-auto custom-scrollbar leading-relaxed">
+Click "Compile & Run" to view AST structure.
+                    </pre>
+                </div>
+
+                <!-- 3. Semantic Analysis Tab -->
+                <div id="semanticTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">Symbol Table & Scope Verification</h3>
+                        <span class="text-[11px] text-slate-500 dark:text-zinc-500">Identifier Name, Type, Scope & Value</span>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 font-semibold uppercase text-[10px]">
+                                <tr>
+                                    <th class="py-2.5 px-3">Variable/Symbol</th>
+                                    <th class="py-2.5 px-3">Type</th>
+                                    <th class="py-2.5 px-3">Scope</th>
+                                    <th class="py-2.5 px-3">Line</th>
+                                    <th class="py-2.5 px-3">Initial Value</th>
+                                </tr>
+                            </thead>
+                            <tbody id="symbolTableBody" class="divide-y divide-slate-200 dark:divide-zinc-800 font-code text-slate-700 dark:text-zinc-300">
+                                <tr>
+                                    <td colspan="5" class="py-8 text-center text-slate-400 dark:text-zinc-500 font-sans">
+                                        Click "Compile & Run" to view semantic symbols.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. Intermediate Code Generation (ICG) Tab -->
+                <div id="icgTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">Three-Address Code (3AC) Representation</h3>
+                        <span class="text-[11px] text-slate-500 dark:text-zinc-500">Linear 3AC and Quadruples</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Linear Instructions:</p>
+                            <pre id="icgTextOutput" class="bg-white dark:bg-zinc-900 p-4 rounded-lg border border-slate-200 dark:border-zinc-800 font-code text-xs text-cyan-700 dark:text-cyan-300 overflow-x-auto custom-scrollbar leading-relaxed min-h-[220px]">
+Click "Compile & Run" to generate intermediate code.
+                            </pre>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">Quadruples Table (Op, Arg1, Arg2, Result):</p>
+                            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-800 max-h-[300px] custom-scrollbar bg-white dark:bg-zinc-900">
+                                <table class="w-full text-left text-xs font-code">
+                                    <thead class="bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 font-sans text-[10px] uppercase">
+                                        <tr>
+                                            <th class="p-2">Op</th>
+                                            <th class="p-2">Arg1</th>
+                                            <th class="p-2">Arg2</th>
+                                            <th class="p-2">Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="quadTableBody" class="divide-y divide-slate-200 dark:divide-zinc-800 text-slate-700 dark:text-zinc-300">
+                                        <tr>
+                                            <td colspan="4" class="p-4 text-center text-slate-400 dark:text-zinc-500 font-sans">No code generated yet.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Output & Execution Tab -->
+                <div id="outputTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">Final Execution Output</h3>
+                        <span class="text-[11px] text-slate-500 dark:text-zinc-500">Standard Console & Runtime Environment</span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-zinc-400 mb-1">Standard Console Output (show statements):</label>
+                        <pre id="consoleOutput" class="bg-slate-900 dark:bg-black p-4 rounded-lg border border-slate-300 dark:border-zinc-800 font-code text-xs text-green-400 min-h-[120px] custom-scrollbar">
+Program execution output will appear here.
+                        </pre>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
+                            <h4 class="text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-2">Final Yielded Value:</h4>
+                            <div id="yieldOutput" class="text-sm font-code text-cyan-600 dark:text-cyan-400 bg-slate-50 dark:bg-zinc-950 px-3 py-2 rounded border border-slate-200 dark:border-zinc-800">
+                                None
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
+                            <h4 class="text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-2">Variables in Memory:</h4>
+                            <pre id="memStateOutput" class="text-xs font-code text-slate-700 dark:text-zinc-300 bg-slate-50 dark:bg-zinc-950 p-2.5 rounded border border-slate-200 dark:border-zinc-800 max-h-24 overflow-y-auto">
+{}
+                            </pre>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Information Modal -->
+    <div id="groupModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="toggleModal('groupModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 dark:text-white">Compiler Construction Project</h2>
+                    <p class="text-xs text-slate-500 dark:text-zinc-400">Language: <span class="text-cyan-600 dark:text-cyan-400 font-semibold">QuantumFlow</span></p>
+                </div>
+            </div>
+
+            <div class="divide-y divide-slate-200 dark:divide-zinc-800 mb-6">
+                {% for member in group %}
+                <div class="py-3 flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-zinc-200">{{ member.name }}</p>
+                        <p class="text-xs font-code text-cyan-600 dark:text-cyan-400">{{ member.roll }}</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full {% if member.role == 'Group Leader' %}bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800{% else %}bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700{% endif %}">
+                        {{ member.role }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button onclick="toggleModal('groupModal')" class="w-full bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 py-2 rounded-lg text-xs font-semibold transition">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Client-side Logic & Theme Switcher -->
+    <script>
+        const sampleData = {{ samples|tojson }};
+        let editor;
+
+        // Theme management (Antigravity / VS Code Dark & Light Mode)
+        function initTheme() {
+            const savedTheme = localStorage.getItem('qf_theme') || 'dark';
+            applyTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('qf_theme', newTheme);
+        }
+
+        function applyTheme(theme) {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                if (icon) icon.className = "fa-solid fa-moon text-blue-400";
+                if (label) label.innerText = "Dark Theme";
+                if (editor) editor.setOption("theme", "dracula");
+            } else {
+                document.documentElement.classList.remove('dark');
+                if (icon) icon.className = "fa-solid fa-sun text-amber-500";
+                if (label) label.innerText = "Light Theme";
+                if (editor) editor.setOption("theme", "default");
+            }
+        }
+
+        // Custom QuantumFlow Autocomplete dictionary with snippets
+        const QUANTUMFLOW_KEYWORDS = [
+            { text: "initiate\n    \nend", displayText: "initiate ... end", badge: "block" },
+            { text: "module name():\n    initiate\n    end", displayText: "module ...", badge: "func" },
+            { text: "when condition\n    initiate\n    end\notherwise\n    initiate\n    end", displayText: "when ... otherwise", badge: "cond" },
+            { text: "cycle condition\n    initiate\n    end", displayText: "cycle ... end", badge: "loop" },
+            { text: "show(\"\")", displayText: "show(value)", badge: "print" },
+            { text: "yield ", displayText: "yield value", badge: "return" },
+            { text: ":= ", displayText: ":= (assign)", badge: "op" },
+            { text: ".+. ", displayText: ".+. (add)", badge: "op" },
+            { text: ".-. ", displayText: ".-. (sub)", badge: "op" },
+            { text: ".*. ", displayText: ".*. (mul)", badge: "op" },
+            { text: "./. ", displayText: "./. (div)", badge: "op" },
+            { text: "==? ", displayText: "==? (equal)", badge: "op" },
+            { text: "!=? ", displayText: "!=? (not equal)", badge: "op" },
+            { text: ">>> ", displayText: ">>> (greater)", badge: "op" },
+            { text: "<<< ", displayText: "<<< (less)", badge: "op" },
+            { text: "&&& ", displayText: "&&& (and)", badge: "op" },
+            { text: "||| ", displayText: "||| (or)", badge: "op" }
+        ];
+
+        // Register custom QuantumFlow highlighter mode for CodeMirror
+        CodeMirror.registerHelper("hint", "quantumflow", function(cm) {
+            const cur = cm.getCursor();
+            const token = cm.getTokenAt(cur);
+            const start = token.start;
+            const end = cur.ch;
+            const currentWord = token.string.trim().toLowerCase();
+
+            // Extract variable names from editor for intelligent completion
+            const codeText = cm.getValue();
+            const varMatches = codeText.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+            const uniqueVars = Array.from(new Set(varMatches)).filter(v => 
+                !['initiate', 'end', 'module', 'when', 'otherwise', 'cycle', 'yield', 'show'].includes(v)
+            );
+
+            const list = [];
+
+            QUANTUMFLOW_KEYWORDS.forEach(item => {
+                if (item.displayText.toLowerCase().includes(currentWord) || item.text.toLowerCase().startsWith(currentWord)) {
+                    list.push({
+                        text: item.text,
+                        displayText: item.displayText,
+                        render: function(element, self, data) {
+                            element.innerHTML = `<span>${data.displayText}</span> <span class="hint-badge">${item.badge}</span>`;
+                        }
+                    });
+                }
+            });
+
+            uniqueVars.forEach(v => {
+                if (v.toLowerCase().startsWith(currentWord) && currentWord.length > 0) {
+                    list.push({
+                        text: v,
+                        displayText: v,
+                        render: function(element, self, data) {
+                            element.innerHTML = `<span>${data.displayText}</span> <span class="hint-badge">var</span>`;
+                        }
+                    });
+                }
+            });
+
+            return {
+                list: list,
+                from: CodeMirror.Pos(cur.line, start),
+                to: CodeMirror.Pos(cur.line, end)
+            };
+        });
+
+        // Initialize editor on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+
+            const textarea = document.getElementById('codeInput');
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            editor = CodeMirror.fromTextArea(textarea, {
+                lineNumbers: true,
+                theme: isDark ? "dracula" : "default",
+                styleActiveLine: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                tabSize: 4,
+                indentUnit: 4,
+                extraKeys: {
+                    "Ctrl-Space": "autocomplete"
+                }
+            });
+
+            editor.on("inputRead", function(cm, change) {
+                if (change.origin !== "paste" && change.text[0] && /[a-zA-Z_:.]/.test(change.text[0])) {
+                    cm.showHint({ hint: CodeMirror.hint.quantumflow, completeSingle: false });
+                }
+            });
+
+            loadSample();
+        });
+
+        function loadSample() {
+            const select = document.getElementById('sampleSelect');
+            const key = select.value;
+            if (sampleData[key] && editor) {
+                editor.setValue(sampleData[key].code);
+            }
+        }
+
+        function clearEditor() {
+            if (editor) {
+                editor.setValue("");
+                editor.focus();
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'font-semibold');
+                btn.classList.add('text-slate-600', 'dark:text-zinc-400');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.add('bg-blue-600', 'text-white', 'font-semibold');
+            activeBtn.classList.remove('text-slate-600', 'dark:text-zinc-400');
+        }
+
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        async function runCompiler() {
+            const code = editor.getValue();
+            const runBtn = document.getElementById('runBtn');
+            const statusBanner = document.getElementById('statusBanner');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusMessage = document.getElementById('statusMessage');
+
+            runBtn.disabled = true;
+            runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Compiling...</span>`;
+
+            try {
+                const response = await fetch('/compile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await response.json();
+
+                // Status Banner Update
+                statusBanner.classList.remove('hidden');
+                if (data.success) {
+                    statusBanner.className = "mb-4 p-3 rounded-lg text-xs font-medium border flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300";
+                    statusIcon.className = "fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400";
+                    statusMessage.innerText = "Compilation and execution completed successfully across all 5 stages!";
+                } else {
+                    statusBanner.className = "mb-4 p-3 rounded-lg text-xs font-medium border flex items-center gap-3 bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300";
+                    statusIcon.className = "fa-solid fa-triangle-exclamation text-rose-600 dark:text-rose-400";
+                    const stageKey = data.current_stage ? data.current_stage.toLowerCase().split(' ')[0] : 'lexical';
+                    const errDetail = data[stageKey]?.error || "Error occurred during compilation.";
+                    statusMessage.innerText = `Error at [${data.current_stage}]: ${errDetail}`;
+                }
+
+                // 1. Lexical Stage
+                const tokens = data.lexical.tokens || [];
+                document.getElementById('tokenBadge').innerText = tokens.length;
+                const tokenTbody = document.getElementById('tokenTableBody');
+                if (tokens.length > 0) {
+                    tokenTbody.innerHTML = tokens.map((tok, idx) => `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                            <td class="py-2 px-3 text-slate-400 dark:text-zinc-500">${idx + 1}</td>
+                            <td class="py-2 px-3 text-slate-500 dark:text-zinc-400">${tok.line}:${tok.column}</td>
+                            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 dark:bg-zinc-800 text-cyan-700 dark:text-cyan-300 font-semibold">${tok.type}</span></td>
+                            <td class="py-2 px-3 text-emerald-600 dark:text-emerald-400 font-semibold">${escapeHtml(tok.value)}</td>
+                        </tr>
+                    `).join('');
+                } else if (data.lexical.error) {
+                    tokenTbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-rose-500 font-sans">${data.lexical.error}</td></tr>`;
+                }
+
+                // 2. Syntax (AST) Stage
+                const astBox = document.getElementById('astOutput');
+                if (data.syntax.ast) {
+                    astBox.innerText = JSON.stringify(data.syntax.ast, null, 2);
+                    astBox.classList.remove('text-rose-600', 'dark:text-rose-400');
+                    astBox.classList.add('text-emerald-600', 'dark:text-emerald-400');
+                } else if (data.syntax.error) {
+                    astBox.innerText = data.syntax.error;
+                    astBox.classList.remove('text-emerald-600', 'dark:text-emerald-400');
+                    astBox.classList.add('text-rose-600', 'dark:text-rose-400');
+                }
+
+                // 3. Semantic Stage
+                const symTbody = document.getElementById('symbolTableBody');
+                const symbols = data.semantic.symbol_table || [];
+                if (symbols.length > 0) {
+                    symTbody.innerHTML = symbols.map(sym => `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                            <td class="py-2 px-3 text-cyan-700 dark:text-cyan-300 font-bold">${sym.name}</td>
+                            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[11px] bg-amber-50 dark:bg-zinc-800 text-amber-700 dark:text-yellow-300 font-semibold">${sym.type}</span></td>
+                            <td class="py-2 px-3 text-slate-500 dark:text-zinc-400">${sym.scope}</td>
+                            <td class="py-2 px-3 text-slate-400 dark:text-zinc-500">${sym.line}</td>
+                            <td class="py-2 px-3 text-emerald-600 dark:text-emerald-400">${sym.initial_value}</td>
+                        </tr>
+                    `).join('');
+                } else if (data.semantic.error) {
+                    symTbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-rose-500 font-sans">${data.semantic.error}</td></tr>`;
+                }
+
+                // 4. ICG Stage
+                const icgText = document.getElementById('icgTextOutput');
+                const quadTbody = document.getElementById('quadTableBody');
+                const instrs = data.icg.instructions || [];
+                if (instrs.length > 0) {
+                    icgText.innerText = instrs.map(i => i.text).join('\n');
+                    quadTbody.innerHTML = instrs.map(i => `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/50">
+                            <td class="p-2 text-cyan-600 dark:text-cyan-400 font-bold">${i.op}</td>
+                            <td class="p-2 text-slate-600 dark:text-zinc-300">${i.arg1 || '-'}</td>
+                            <td class="p-2 text-slate-600 dark:text-zinc-300">${i.arg2 || '-'}</td>
+                            <td class="p-2 text-amber-600 dark:text-yellow-300 font-semibold">${i.result || '-'}</td>
+                        </tr>
+                    `).join('');
+                } else if (data.icg.error) {
+                    icgText.innerText = data.icg.error;
+                }
+
+                // 5. Output / Runtime Stage
+                const consoleBox = document.getElementById('consoleOutput');
+                const yieldBox = document.getElementById('yieldOutput');
+                const memBox = document.getElementById('memStateOutput');
+
+                if (data.runtime.error) {
+                    consoleBox.innerText = `Runtime Error: ${data.runtime.error}`;
+                    consoleBox.classList.remove('text-green-400');
+                    consoleBox.classList.add('text-rose-400');
+                } else {
+                    consoleBox.innerText = data.runtime.output || "(No console output)";
+                    consoleBox.classList.remove('text-rose-400');
+                    consoleBox.classList.add('text-green-400');
+                }
+
+                yieldBox.innerText = data.runtime.yield_value !== null ? data.runtime.yield_value : 'None';
+                memBox.innerText = JSON.stringify(data.runtime.variables, null, 2);
+
+            } catch (err) {
+                alert("Server connection error: " + err);
+            } finally {
+                runBtn.disabled = false;
+                runBtn.innerHTML = `<i class="fa-solid fa-play"></i><span>Compile & Run</span>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
